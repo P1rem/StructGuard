@@ -61,5 +61,3 @@ Vision
 
 To build the first scalable, AI-driven structural authenticity platform capable of safeguarding entire cities with minimal infrastructure footprint.
 
-* Write a **Deployment section**
-* Or tailor this README specifically for a hackathon / research submission 🚀
