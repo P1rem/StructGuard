@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>StructGuard — City Infrastructure Intelligence</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #060a12;
+    --panel: #0d1421;
+    --panel2: #111827;
+    --border: rgba(0,210,180,0.12);
+    --teal: #00d2b4;
+    --teal2: #00a896;
+    --red: #ff4757;
+    --amber: #ffa502;
+    --blue: #1e90ff;
+    --text: #e8f0fe;
+    --muted: #6b7fa3;
+    --glow: 0 0 20px rgba(0,210,180,0.25);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated grid background */
+  body::before {
+    content:'';
+    position:fixed;
+    inset:0;
+    background-image:
+      linear-gradient(rgba(0,210,180,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,210,180,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events:none;
+    z-index:0;
+  }
+
+  /* Ambient glow */
+  body::after {
+    content:'';
+    position:fixed;
+    top:-20%;
+    left:30%;
+    width:600px;
+    height:600px;
+    background: radial-gradient(circle, rgba(0,210,180,0.06) 0%, transparent 70%);
+    pointer-events:none;
+    z-index:0;
+    animation: pulse 6s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%,100% { transform: scale(1); opacity:1; }
+    50% { transform: scale(1.2); opacity:0.6; }
+  }
+
+  /* ── HEADER ── */
+  header {
+    position: relative;
+    z-index:10;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding: 16px 32px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(6,10,18,0.9);
+    backdrop-filter: blur(12px);
+  }
+
+  .logo {
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+
+  .logo-icon {
+    width:36px; height:36px;
+    background: linear-gradient(135deg, var(--teal), var(--teal2));
+    border-radius:8px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:'Space Mono',monospace;
+    font-size:14px;
+    font-weight:700;
+    color:#000;
+    box-shadow: var(--glow);
+  }
+
+  .logo-name {
+    font-family:'Syne',sans-serif;
+    font-size:20px;
+    font-weight:800;
+    letter-spacing:-0.5px;
+  }
+
+  .logo-name span { color: var(--teal); }
+
+  .header-status {
+    display:flex;
+    align-items:center;
+    gap:24px;
+  }
+
+  .live-badge {
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-family:'Space Mono',monospace;
+    font-size:11px;
+    color: var(--teal);
+    text-transform:uppercase;
+    letter-spacing:1px;
+  }
+
+  .live-dot {
+    width:7px; height:7px;
+    border-radius:50%;
+    background: var(--teal);
+    box-shadow: 0 0 8px var(--teal);
+    animation: blink 1.2s ease-in-out infinite;
+  }
+
+  @keyframes blink {
+    0%,100% { opacity:1; }
+    50% { opacity:0.2; }
+  }
+
+  .city-selector {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family:'DM Sans',sans-serif;
+    font-size:13px;
+    padding: 6px 12px;
+    border-radius:6px;
+    outline:none;
+    cursor:pointer;
+  }
+
+  .header-time {
+    font-family:'Space Mono',monospace;
+    font-size:12px;
+    color: var(--muted);
+  }
+
+  /* ── LAYOUT ── */
+  .layout {
+    position:relative;
+    z-index:1;
+    display:grid;
+    grid-template-columns: 260px 1fr 300px;
+    grid-template-rows: auto 1fr auto;
+    min-height: calc(100vh - 61px);
+    gap:0;
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    border-right: 1px solid var(--border);
+    padding: 24px 16px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+
+  .sidebar-label {
+    font-family:'Space Mono',monospace;
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:1.5px;
+    color: var(--muted);
+    padding: 0 8px 8px;
+  }
+
+  .struct-item {
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding: 10px 12px;
+    border-radius:8px;
+    cursor:pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+    position:relative;
+  }
+
+  .struct-item:hover {
+    background: rgba(0,210,180,0.05);
+    border-color: var(--border);
+  }
+
+  .struct-item.active {
+    background: rgba(0,210,180,0.08);
+    border-color: rgba(0,210,180,0.25);
+  }
+
+  .struct-dot {
+    width:8px; height:8px;
+    border-radius:50%;
+    flex-shrink:0;
+  }
+
+  .dot-green { background:#00d2b4; box-shadow:0 0 6px #00d2b4; }
+  .dot-amber { background:#ffa502; box-shadow:0 0 6px #ffa502; }
+  .dot-red   { background:#ff4757; box-shadow:0 0 6px #ff4757; animation: blink 0.8s infinite; }
+
+  .struct-info { flex:1; }
+  .struct-name { font-size:13px; font-weight:500; }
+  .struct-sub  { font-size:11px; color: var(--muted); margin-top:2px; }
+  .struct-score {
+    font-family:'Space Mono',monospace;
+    font-size:12px;
+    font-weight:700;
+  }
+
+  .score-g { color: var(--teal); }
+  .score-a { color: var(--amber); }
+  .score-r { color: var(--red); }
+
+  .sidebar-divider {
+    height:1px;
+    background: var(--border);
+    margin: 8px 0;
+  }
+
+  /* ── MAIN ── */
+  .main {
+    padding: 24px;
+    display:flex;
+    flex-direction:column;
+    gap:20px;
+    overflow:hidden;
+  }
+
+  /* KPI Row */
+  .kpi-row {
+    display:grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap:16px;
+  }
+
+  .kpi-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius:12px;
+    padding: 16px 20px;
+    position:relative;
+    overflow:hidden;
+    transition: border-color 0.3s;
+  }
+
+  .kpi-card:hover { border-color: rgba(0,210,180,0.35); }
+
+  .kpi-card::before {
+    content:'';
+    position:absolute;
+    top:0; left:0; right:0;
+    height:2px;
+    border-radius:2px 2px 0 0;
+  }
+  .kpi-card.teal::before  { background: var(--teal); }
+  .kpi-card.amber::before { background: var(--amber); }
+  .kpi-card.red::before   { background: var(--red); }
+  .kpi-card.blue::before  { background: var(--blue); }
+
+  .kpi-label {
+    font-size:11px;
+    color: var(--muted);
+    text-transform:uppercase;
+    letter-spacing:1px;
+    margin-bottom:8px;
+  }
+
+  .kpi-value {
+    font-family:'Syne',sans-serif;
+    font-size:28px;
+    font-weight:800;
+    line-height:1;
+    margin-bottom:4px;
+  }
+  .kpi-card.teal .kpi-value  { color: var(--teal); }
+  .kpi-card.amber .kpi-value { color: var(--amber); }
+  .kpi-card.red .kpi-value   { color: var(--red); }
+  .kpi-card.blue .kpi-value  { color: var(--blue); }
+
+  .kpi-sub { font-size:11px; color: var(--muted); }
+
+  /* 3D Splat Viewer */
+  .splat-panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius:12px;
+    overflow:hidden;
+    flex:1;
+    position:relative;
+    min-height:320px;
+  }
+
+  .panel-header {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .panel-title {
+    font-family:'Syne',sans-serif;
+    font-size:13px;
+    font-weight:700;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+
+  .panel-tag {
+    font-family:'Space Mono',monospace;
+    font-size:9px;
+    background: rgba(0,210,180,0.1);
+    color: var(--teal);
+    border: 1px solid rgba(0,210,180,0.2);
+    padding: 2px 7px;
+    border-radius:4px;
+    text-transform:uppercase;
+    letter-spacing:1px;
+  }
+
+  .panel-controls {
+    display:flex;
+    gap:8px;
+  }
+
+  .ctrl-btn {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size:11px;
+    padding: 4px 10px;
+    border-radius:5px;
+    cursor:pointer;
+    transition: all 0.2s;
+    font-family:'DM Sans',sans-serif;
+  }
+
+  .ctrl-btn:hover, .ctrl-btn.active {
+    background: rgba(0,210,180,0.1);
+    border-color: rgba(0,210,180,0.3);
+    color: var(--teal);
+  }
+
+  /* Splat Canvas */
+  .splat-canvas {
+    position:relative;
+    height:280px;
+    background: radial-gradient(ellipse at 50% 60%, #0a1a2e 0%, #060a12 100%);
+    overflow:hidden;
+  }
+
+  /* SVG bridge wireframe */
+  .bridge-svg {
+    position:absolute;
+    bottom:40px;
+    left:50%;
+    transform: translateX(-50%);
+    width:700px;
+    opacity:0.85;
+  }
+
+  /* Gaussian splat blobs */
+  .splat-blob {
+    position:absolute;
+    border-radius:50%;
+    filter: blur(18px);
+    animation: float 4s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%,100% { transform: translateY(0px); }
+    50% { transform: translateY(-8px); }
+  }
+
+  /* Risk overlay markers */
+  .risk-marker {
+    position:absolute;
+    width:14px; height:14px;
+    border-radius:50%;
+    cursor:pointer;
+    transform:translate(-50%,-50%);
+    animation: marker-pulse 2s ease-in-out infinite;
+  }
+
+  .risk-marker::after {
+    content:'';
+    position:absolute;
+    inset:-6px;
+    border-radius:50%;
+    border: 1.5px solid currentColor;
+    opacity:0.4;
+    animation: ring-expand 2s ease-out infinite;
+  }
+
+  @keyframes ring-expand {
+    0% { transform:scale(1); opacity:0.5; }
+    100% { transform:scale(2.5); opacity:0; }
+  }
+
+  .risk-marker.danger { background: var(--red); color: var(--red); box-shadow: 0 0 12px var(--red); }
+  .risk-marker.warn   { background: var(--amber); color: var(--amber); box-shadow: 0 0 12px var(--amber); }
+  .risk-marker.safe   { background: var(--teal); color: var(--teal); box-shadow: 0 0 8px var(--teal); }
+
+  .marker-tooltip {
+    position:absolute;
+    bottom:22px;
+    left:50%;
+    transform:translateX(-50%);
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius:6px;
+    padding: 6px 10px;
+    font-size:11px;
+    white-space:nowrap;
+    pointer-events:none;
+    opacity:0;
+    transition:opacity 0.2s;
+    z-index:10;
+  }
+
+  .risk-marker:hover .marker-tooltip { opacity:1; }
+
+  /* Heatmap legend */
+  .heatmap-legend {
+    position:absolute;
+    bottom:12px;
+    right:16px;
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:10px;
+    color: var(--muted);
+    font-family:'Space Mono',monospace;
+  }
+
+  .legend-bar {
+    width:80px; height:6px;
+    border-radius:3px;
+    background: linear-gradient(90deg, var(--teal), var(--amber), var(--red));
+  }
+
+  /* Scan line effect */
+  .scan-line {
+    position:absolute;
+    top:0; left:0; right:0;
+    height:2px;
+    background: linear-gradient(90deg, transparent, rgba(0,210,180,0.6), transparent);
+    animation: scan 3s linear infinite;
+    pointer-events:none;
+  }
+
+  @keyframes scan {
+    0% { top:0; opacity:1; }
+    95% { opacity:1; }
+    100% { top:100%; opacity:0; }
+  }
+
+  /* Bottom row — modules */
+  .module-row {
+    display:grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap:16px;
+  }
+
+  .module-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius:12px;
+    overflow:hidden;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+
+  .module-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(0,210,180,0.3);
+  }
+
+  /* Frequency chart */
+  .freq-chart {
+    height:80px;
+    padding: 12px 16px 8px;
+    display:flex;
+    align-items:flex-end;
+    gap:3px;
+  }
+
+  .freq-bar {
+    flex:1;
+    border-radius:2px 2px 0 0;
+    transition: height 0.5s ease;
+    min-height:4px;
+  }
+
+  /* Acoustic waveform */
+  .waveform {
+    height:70px;
+    padding: 10px 16px;
+    position:relative;
+    overflow:hidden;
+  }
+
+  .waveform svg { width:100%; height:100%; }
+
+  /* Corrosion map */
+  .corrosion-grid {
+    display:grid;
+    grid-template-columns: repeat(10,1fr);
+    gap:2px;
+    padding: 12px 16px;
+    height:80px;
+  }
+
+  .corr-cell {
+    border-radius:2px;
+  }
+
+  /* Module info row */
+  .module-info {
+    padding: 10px 16px 14px;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+  }
+
+  .module-metric {
+    font-family:'Syne',sans-serif;
+    font-size:22px;
+    font-weight:800;
+  }
+
+  .module-label { font-size:11px; color: var(--muted); margin-top:2px; }
+
+  .status-pill {
+    font-family:'Space Mono',monospace;
+    font-size:10px;
+    padding: 3px 9px;
+    border-radius:20px;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+  }
+
+  .pill-ok     { background:rgba(0,210,180,0.1); color:var(--teal); border:1px solid rgba(0,210,180,0.25); }
+  .pill-warn   { background:rgba(255,165,2,0.1); color:var(--amber); border:1px solid rgba(255,165,2,0.25); }
+  .pill-danger { background:rgba(255,71,87,0.1); color:var(--red); border:1px solid rgba(255,71,87,0.25); }
+
+  /* ── RIGHT PANEL ── */
+  .right-panel {
+    border-left: 1px solid var(--border);
+    display:flex;
+    flex-direction:column;
+  }
+
+  .alert-feed {
+    padding: 20px 16px;
+    flex:1;
+    overflow-y:auto;
+  }
+
+  .alert-feed::-webkit-scrollbar { width:3px; }
+  .alert-feed::-webkit-scrollbar-track { background:transparent; }
+  .alert-feed::-webkit-scrollbar-thumb { background: var(--border); border-radius:2px; }
+
+  .section-title {
+    font-family:'Space Mono',monospace;
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:1.5px;
+    color: var(--muted);
+    margin-bottom:14px;
+  }
+
+  .alert-item {
+    display:flex;
+    gap:10px;
+    padding: 10px 12px;
+    border-radius:8px;
+    margin-bottom:8px;
+    border: 1px solid transparent;
+    cursor:pointer;
+    transition: all 0.2s;
+    animation: slide-in 0.4s ease both;
+  }
+
+  @keyframes slide-in {
+    from { transform:translateX(20px); opacity:0; }
+    to   { transform:translateX(0); opacity:1; }
+  }
+
+  .alert-item:hover { background: rgba(255,255,255,0.03); }
+
+  .alert-item.crit { border-left: 2px solid var(--red); background: rgba(255,71,87,0.04); }
+  .alert-item.warn { border-left: 2px solid var(--amber); background: rgba(255,165,2,0.04); }
+  .alert-item.info { border-left: 2px solid var(--teal); background: rgba(0,210,180,0.04); }
+
+  .alert-icon { font-size:16px; margin-top:1px; flex-shrink:0; }
+  .alert-title { font-size:12px; font-weight:500; margin-bottom:3px; }
+  .alert-detail { font-size:11px; color: var(--muted); line-height:1.4; }
+  .alert-time {
+    font-family:'Space Mono',monospace;
+    font-size:10px;
+    color: var(--muted);
+    margin-top:4px;
+  }
+
+  /* Federated panel */
+  .fed-panel {
+    border-top: 1px solid var(--border);
+    padding: 16px;
+  }
+
+  .fed-cities {
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    margin-top:12px;
+  }
+
+  .fed-city {
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-size:12px;
+  }
+
+  .fed-bar-track {
+    flex:1;
+    height:4px;
+    background: rgba(255,255,255,0.05);
+    border-radius:2px;
+    overflow:hidden;
+  }
+
+  .fed-bar-fill {
+    height:100%;
+    border-radius:2px;
+    background: linear-gradient(90deg, var(--teal2), var(--teal));
+    transition: width 1s ease;
+  }
+
+  .fed-city-name { width:60px; font-size:11px; color: var(--muted); }
+  .fed-city-pct  { width:32px; text-align:right; font-family:'Space Mono',monospace; font-size:10px; color: var(--teal); }
+
+  /* Failure prediction bar */
+  .pred-panel {
+    border-top: 1px solid var(--border);
+    padding: 16px;
+  }
+
+  .pred-item {
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:10px;
+    font-size:12px;
+  }
+
+  .pred-name { flex:1; }
+
+  .pred-track {
+    width:90px;
+    height:6px;
+    background: rgba(255,255,255,0.05);
+    border-radius:3px;
+    overflow:hidden;
+  }
+
+  .pred-fill {
+    height:100%;
+    border-radius:3px;
+  }
+
+  .pred-pct {
+    width:32px;
+    text-align:right;
+    font-family:'Space Mono',monospace;
+    font-size:10px;
+  }
+
+  /* ── FOOTER STATUS BAR ── */
+  .status-bar {
+    grid-column:1/-1;
+    border-top: 1px solid var(--border);
+    background: rgba(6,10,18,0.95);
+    padding: 8px 24px;
+    display:flex;
+    align-items:center;
+    gap:24px;
+    font-family:'Space Mono',monospace;
+    font-size:10px;
+    color: var(--muted);
+  }
+
+  .status-item {
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+
+  .status-val { color: var(--teal); }
+
+  /* Animated wave for acoustic */
+  @keyframes wave-anim {
+    0% { d: path('M0,35 C20,35 20,10 40,10 C60,10 60,55 80,55 C100,55 100,20 120,20 C140,20 140,45 160,45 C180,45 180,15 200,15 C220,15 220,50 240,50 C260,50 260,25 268,25'); }
+    50% { d: path('M0,40 C20,40 20,15 40,15 C60,15 60,60 80,60 C100,60 100,25 120,25 C140,25 140,50 160,50 C180,50 180,10 200,10 C220,10 220,45 240,45 C260,45 260,30 268,30'); }
+    100% { d: path('M0,35 C20,35 20,10 40,10 C60,10 60,55 80,55 C100,55 100,20 120,20 C140,20 140,45 160,45 C180,45 180,15 200,15 C220,15 220,50 240,50 C260,50 260,25 268,25'); }
+  }
+
+  .wave-path {
+    animation: wave-anim 2s ease-in-out infinite;
+  }
+
+  .tab-row {
+    display:flex;
+    gap:4px;
+    padding: 0 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .tab {
+    font-size:11px;
+    padding: 8px 14px;
+    cursor:pointer;
+    border-bottom: 2px solid transparent;
+    color: var(--muted);
+    transition: all 0.2s;
+    margin-bottom:-1px;
+  }
+
+  .tab.active {
+    color: var(--teal);
+    border-bottom-color: var(--teal);
+  }
+
+  /* Animate KPI numbers */
+  .kpi-value { animation: count-up 1.5s ease both; }
+  @keyframes count-up {
+    from { opacity:0; transform:translateY(8px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">SG</div>
+    <div>
+      <div class="logo-name">Struct<span>Guard</span></div>
+    </div>
+  </div>
+  <div class="header-status">
+    <div class="live-badge"><div class="live-dot"></div> Live Monitoring</div>
+    <select class="city-selector" onchange="changeCity(this.value)">
+      <option>Mumbai — Zone B</option>
+      <option>Delhi — Zone A</option>
+      <option>Bengaluru — Zone C</option>
+      <option>Chennai — Zone D</option>
+    </select>
+    <div class="header-time" id="clock">--:--:--</div>
+  </div>
+</header>
+
+<!-- MAIN LAYOUT -->
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-label">Structures (14)</div>
+
+    <div class="struct-item active">
+      <div class="struct-dot dot-red"></div>
+      <div class="struct-info">
+        <div class="struct-name">Bandra–Worli Sealink</div>
+        <div class="struct-sub">Bridge · 5.6 km</div>
+      </div>
+      <div class="struct-score score-r">62</div>
+    </div>
+
+    <div class="struct-item" onclick="selectStruct(this, 78, 'amber')">
+      <div class="struct-dot dot-amber"></div>
+      <div class="struct-info">
+        <div class="struct-name">CST Flyover</div>
+        <div class="struct-sub">Overpass · 1.2 km</div>
+      </div>
+      <div class="struct-score score-a">78</div>
+    </div>
+
+    <div class="struct-item" onclick="selectStruct(this, 91, 'green')">
+      <div class="struct-dot dot-green"></div>
+      <div class="struct-info">
+        <div class="struct-name">Mahim Causeway</div>
+        <div class="struct-sub">Bridge · 0.8 km</div>
+      </div>
+      <div class="struct-score score-g">91</div>
+    </div>
+
+    <div class="struct-item" onclick="selectStruct(this, 55, 'red')">
+      <div class="struct-dot dot-red"></div>
+      <div class="struct-info">
+        <div class="struct-name">Andheri Overpass</div>
+        <div class="struct-sub">Overpass · 0.6 km</div>
+      </div>
+      <div class="struct-score score-r">55</div>
+    </div>
+
+    <div class="struct-item" onclick="selectStruct(this, 84, 'green')">
+      <div class="struct-dot dot-green"></div>
+      <div class="struct-info">
+        <div class="struct-name">Thane Creek Bridge</div>
+        <div class="struct-sub">Bridge · 3.1 km</div>
+      </div>
+      <div class="struct-score score-g">84</div>
+    </div>
+
+    <div class="struct-item" onclick="selectStruct(this, 70, 'amber')">
+      <div class="struct-dot dot-amber"></div>
+      <div class="struct-info">
+        <div class="struct-name">Kurla Viaduct</div>
+        <div class="struct-sub">Viaduct · 2.0 km</div>
+      </div>
+      <div class="struct-score score-a">70</div>
+    </div>
+
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-label">System Status</div>
+
+    <div style="padding:8px 12px; font-size:12px;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px;color:var(--muted)">
+        <span>Sensors online</span><span style="color:var(--teal);font-family:'Space Mono',monospace">47/52</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px;color:var(--muted)">
+        <span>Drone pass</span><span style="color:var(--teal);font-family:'Space Mono',monospace">6h ago</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;color:var(--muted)">
+        <span>Fed. sync</span><span style="color:var(--amber);font-family:'Space Mono',monospace">Pending</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+
+    <!-- KPIs -->
+    <div class="kpi-row">
+      <div class="kpi-card red">
+        <div class="kpi-label">Health Score</div>
+        <div class="kpi-value" id="kpi-health">62</div>
+        <div class="kpi-sub">↓ -8 pts from last scan</div>
+      </div>
+      <div class="kpi-card amber">
+        <div class="kpi-label">Resonance Shift</div>
+        <div class="kpi-value" id="kpi-freq">0.7 Hz</div>
+        <div class="kpi-sub">Baseline: 4.2 Hz · Now: 3.5 Hz</div>
+      </div>
+      <div class="kpi-card red">
+        <div class="kpi-label">Failure Risk (90d)</div>
+        <div class="kpi-value" id="kpi-risk">34%</div>
+        <div class="kpi-sub">↑ High — Inspect within 14 days</div>
+      </div>
+      <div class="kpi-card teal">
+        <div class="kpi-label">Deformation Delta</div>
+        <div class="kpi-value" id="kpi-deform">1.2 mm</div>
+        <div class="kpi-sub">Span 3 · Detected this week</div>
+      </div>
+    </div>
+
+    <!-- 3D Splat Viewer -->
+    <div class="splat-panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          4D Gaussian Splat — Bandra–Worli Sealink
+          <div class="panel-tag">Live</div>
+        </div>
+        <div class="panel-controls">
+          <button class="ctrl-btn active" onclick="setView(this,'heatmap')">Heatmap</button>
+          <button class="ctrl-btn" onclick="setView(this,'drift')">Drift δ</button>
+          <button class="ctrl-btn" onclick="setView(this,'corrosion')">Corrosion</button>
+          <button class="ctrl-btn" onclick="setView(this,'acoustic')">Acoustic</button>
+        </div>
+      </div>
+      <div class="splat-canvas" id="splatCanvas">
+
+        <!-- Animated gaussian blobs (represent point cloud density) -->
+        <div class="splat-blob" style="width:180px;height:100px;background:radial-gradient(ellipse,rgba(0,210,180,0.12),transparent);top:30%;left:15%;animation-delay:0s;animation-duration:5s;"></div>
+        <div class="splat-blob" style="width:250px;height:120px;background:radial-gradient(ellipse,rgba(30,144,255,0.08),transparent);top:25%;left:35%;animation-delay:1.5s;animation-duration:4s;"></div>
+        <div class="splat-blob" style="width:200px;height:90px;background:radial-gradient(ellipse,rgba(255,71,87,0.10),transparent);top:35%;left:58%;animation-delay:0.5s;animation-duration:6s;"></div>
+        <div class="splat-blob" style="width:150px;height:80px;background:radial-gradient(ellipse,rgba(255,165,2,0.09),transparent);top:28%;left:75%;animation-delay:2s;animation-duration:4.5s;"></div>
+
+        <!-- Bridge wireframe SVG -->
+        <svg class="bridge-svg" viewBox="0 0 700 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Deck -->
+          <line x1="20" y1="100" x2="680" y2="100" stroke="rgba(0,210,180,0.5)" stroke-width="2"/>
+          <!-- Main cables arcs -->
+          <path d="M 60 100 Q 200 30 350 25 Q 500 30 640 100" stroke="rgba(0,210,180,0.4)" stroke-width="1.5" fill="none"/>
+          <!-- Pylons -->
+          <line x1="60" y1="20" x2="60" y2="150" stroke="rgba(0,210,180,0.6)" stroke-width="3"/>
+          <line x1="640" y1="20" x2="640" y2="150" stroke="rgba(0,210,180,0.6)" stroke-width="3"/>
+          <!-- Hangers -->
+          <line x1="100" y1="64" x2="100" y2="100" stroke="rgba(0,210,180,0.25)" stroke-width="1"/>
+          <line x1="150" y1="48" x2="150" y2="100" stroke="rgba(0,210,180,0.25)" stroke-width="1"/>
+          <line x1="200" y1="38" x2="200" y2="100" stroke="rgba(0,210,180,0.25)" stroke-width="1"/>
+          <line x1="250" y1="30" x2="250" y2="100" stroke="rgba(0,210,180,0.25)" stroke-width="1"/>
+          <line x1="300" y1="27" x2="300" y2="100" stroke="rgba(0,210,180,0.25)" stroke-width="1"/>
+          <line x1="350" y1="26" x2="350" y2="100" stroke="rgba(0,210,180,0.25)" stroke-width="1"/>
+          <line x1="400" y1="27" x2="400" y2="100" stroke="rgba(0,210,180,0.25)" stroke-width="1"/>
+          <line x1="450" y1="30" x2="450" y2="100" stroke="rgba(0,210,180,0.25)" stroke-width="1"/>
+          <line x1="500" y1="38" x2="500" y2="100" stroke="rgba(0,210,180,0.25)" stroke-width="1"/>
+          <line x1="550" y1="48" x2="550" y2="100" stroke="rgba(0,210,180,0.25)" stroke-width="1"/>
+          <line x1="600" y1="64" x2="600" y2="100" stroke="rgba(0,210,180,0.25)" stroke-width="1"/>
+          <!-- Ground -->
+          <line x1="0" y1="150" x2="700" y2="150" stroke="rgba(0,210,180,0.15)" stroke-width="1"/>
+
+          <!-- Hotspot glow on deck (danger zone) -->
+          <ellipse cx="280" cy="100" rx="35" ry="8" fill="rgba(255,71,87,0.18)"/>
+          <ellipse cx="500" cy="100" rx="25" ry="6" fill="rgba(255,165,2,0.15)"/>
+        </svg>
+
+        <!-- Risk markers -->
+        <div class="risk-marker danger" style="left:38%;top:55%;" title="">
+          <div class="marker-tooltip">⚠ Span 3 — Crack detected<br>Risk: 34% | Depth: 8mm</div>
+        </div>
+        <div class="risk-marker warn" style="left:68%;top:58%;" title="">
+          <div class="marker-tooltip">⚡ Pier 7 — Resonance shift<br>0.7 Hz below baseline</div>
+        </div>
+        <div class="risk-marker safe" style="left:22%;top:56%;" title="">
+          <div class="marker-tooltip">✓ Span 1 — Normal<br>Health: 91%</div>
+        </div>
+        <div class="risk-marker safe" style="left:55%;top:54%;" title="">
+          <div class="marker-tooltip">✓ Span 5 — Normal<br>Health: 88%</div>
+        </div>
+
+        <!-- Scan line -->
+        <div class="scan-line"></div>
+
+        <!-- Legend -->
+        <div class="heatmap-legend">
+          <span>Safe</span>
+          <div class="legend-bar"></div>
+          <span>Critical</span>
+        </div>
+
+        <!-- Coordinates overlay -->
+        <div style="position:absolute;top:10px;left:14px;font-family:'Space Mono',monospace;font-size:10px;color:rgba(0,210,180,0.5);">
+          19.0176° N, 72.8136° E | Scan #1847 | δ-max: 1.2mm
+        </div>
+      </div>
+    </div>
+
+    <!-- Module Row -->
+    <div class="module-row">
+
+      <!-- Resonance Profiler -->
+      <div class="module-card">
+        <div class="panel-header" style="padding:12px 16px;">
+          <div class="panel-title" style="font-size:12px;">Resonance Profiler</div>
+          <div class="panel-tag" style="background:rgba(255,165,2,0.1);color:var(--amber);border-color:rgba(255,165,2,0.25);">⚡ Alert</div>
+        </div>
+        <div class="freq-chart" id="freqChart"></div>
+        <div class="module-info">
+          <div>
+            <div class="module-metric" style="color:var(--amber);">3.5 Hz</div>
+            <div class="module-label">Current · Baseline 4.2 Hz</div>
+          </div>
+          <div class="status-pill pill-warn">−0.7 Hz Shift</div>
+        </div>
+      </div>
+
+      <!-- Acoustic CNN -->
+      <div class="module-card">
+        <div class="panel-header" style="padding:12px 16px;">
+          <div class="panel-title" style="font-size:12px;">Acoustic CNN</div>
+          <div class="panel-tag" style="background:rgba(255,71,87,0.1);color:var(--red);border-color:rgba(255,71,87,0.25);">🔴 Crack</div>
+        </div>
+        <div class="waveform">
+          <svg viewBox="0 0 268 70" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="wg" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="rgba(0,210,180,0.6)"/>
+                <stop offset="60%" stop-color="rgba(255,71,87,0.8)"/>
+                <stop offset="100%" stop-color="rgba(0,210,180,0.4)"/>
+              </linearGradient>
+            </defs>
+            <path class="wave-path" d="M0,35 C20,35 20,10 40,10 C60,10 60,55 80,55 C100,55 100,20 120,20 C140,20 140,45 160,45 C180,45 180,15 200,15 C220,15 220,50 240,50 C260,50 260,25 268,25"
+              stroke="url(#wg)" stroke-width="2" fill="none"/>
+            <!-- Crack event spike -->
+            <line x1="130" y1="5" x2="130" y2="65" stroke="rgba(255,71,87,0.5)" stroke-width="1" stroke-dasharray="2,2"/>
+            <text x="133" y="14" fill="rgba(255,71,87,0.8)" font-size="8" font-family="Space Mono,monospace">CRACK</text>
+          </svg>
+        </div>
+        <div class="module-info">
+          <div>
+            <div class="module-metric" style="color:var(--red);">Rebar</div>
+            <div class="module-label">Debonding · 94% confidence</div>
+          </div>
+          <div class="status-pill pill-danger">Inspect Now</div>
+        </div>
+      </div>
+
+      <!-- Corrosion Map -->
+      <div class="module-card">
+        <div class="panel-header" style="padding:12px 16px;">
+          <div class="panel-title" style="font-size:12px;">Corrosion Risk Map</div>
+          <div class="panel-tag">Proxy Model</div>
+        </div>
+        <div class="corrosion-grid" id="corrGrid"></div>
+        <div class="module-info">
+          <div>
+            <div class="module-metric" style="color:var(--amber);">68%</div>
+            <div class="module-label">High-risk zone coverage</div>
+          </div>
+          <div class="status-pill pill-warn">Moderate</div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- RIGHT PANEL -->
+  <aside class="right-panel">
+
+    <!-- Alert Feed -->
+    <div class="alert-feed">
+      <div class="section-title">Active Alerts</div>
+
+      <div class="alert-item crit" style="animation-delay:0.0s">
+        <div class="alert-icon">🚨</div>
+        <div>
+          <div class="alert-title">Rebar Debonding Detected</div>
+          <div class="alert-detail">Bandra–Worli · Span 3 · Pier 4<br>Acoustic CNN: 94% confidence</div>
+          <div class="alert-time">2 min ago</div>
+        </div>
+      </div>
+
+      <div class="alert-item warn" style="animation-delay:0.1s">
+        <div class="alert-icon">⚡</div>
+        <div>
+          <div class="alert-title">Resonance Frequency Drop</div>
+          <div class="alert-detail">−0.7 Hz from 4.2 baseline<br>Stiffness loss suspected</div>
+          <div class="alert-time">18 min ago</div>
+        </div>
+      </div>
+
+      <div class="alert-item warn" style="animation-delay:0.2s">
+        <div class="alert-icon">📡</div>
+        <div>
+          <div class="alert-title">Deformation Delta Flagged</div>
+          <div class="alert-detail">1.2 mm vertical shift detected<br>4D temporal comparison</div>
+          <div class="alert-time">6 h ago</div>
+        </div>
+      </div>
+
+      <div class="alert-item info" style="animation-delay:0.3s">
+        <div class="alert-icon">🌡️</div>
+        <div>
+          <div class="alert-title">Corrosion Risk Elevated</div>
+          <div class="alert-detail">Humidity 91% · Temp 32°C<br>Half-cell proxy: HIGH zone</div>
+          <div class="alert-time">1 d ago</div>
+        </div>
+      </div>
+
+      <div class="alert-item info" style="animation-delay:0.4s">
+        <div class="alert-icon">✅</div>
+        <div>
+          <div class="alert-title">Mahim Causeway Clear</div>
+          <div class="alert-detail">All 8 sensors nominal<br>Health score: 91 / 100</div>
+          <div class="alert-time">3 d ago</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Failure Prediction -->
+    <div class="pred-panel">
+      <div class="section-title">90-Day Failure Risk</div>
+      <div class="pred-item">
+        <div class="pred-name" style="font-size:11px;">Bandra–Worli</div>
+        <div class="pred-track">
+          <div class="pred-fill" style="width:34%;background:linear-gradient(90deg,var(--amber),var(--red));"></div>
+        </div>
+        <div class="pred-pct" style="color:var(--red);">34%</div>
+      </div>
+      <div class="pred-item">
+        <div class="pred-name" style="font-size:11px;">Andheri Overpass</div>
+        <div class="pred-track">
+          <div class="pred-fill" style="width:28%;background:linear-gradient(90deg,var(--amber),var(--red));"></div>
+        </div>
+        <div class="pred-pct" style="color:var(--amber);">28%</div>
+      </div>
+      <div class="pred-item">
+        <div class="pred-name" style="font-size:11px;">Kurla Viaduct</div>
+        <div class="pred-track">
+          <div class="pred-fill" style="width:18%;background:linear-gradient(90deg,var(--teal2),var(--amber));"></div>
+        </div>
+        <div class="pred-pct" style="color:var(--amber);">18%</div>
+      </div>
+      <div class="pred-item">
+        <div class="pred-name" style="font-size:11px;">Mahim Causeway</div>
+        <div class="pred-track">
+          <div class="pred-fill" style="width:6%;background:var(--teal);"></div>
+        </div>
+        <div class="pred-pct" style="color:var(--teal);">6%</div>
+      </div>
+    </div>
+
+    <!-- Federated Network -->
+    <div class="fed-panel">
+      <div class="section-title">Federated Network</div>
+      <div class="fed-cities">
+        <div class="fed-city">
+          <div class="fed-city-name">Mumbai</div>
+          <div class="fed-bar-track"><div class="fed-bar-fill" style="width:92%;"></div></div>
+          <div class="fed-city-pct">92%</div>
+        </div>
+        <div class="fed-city">
+          <div class="fed-city-name">Delhi</div>
+          <div class="fed-bar-track"><div class="fed-bar-fill" style="width:78%;"></div></div>
+          <div class="fed-city-pct">78%</div>
+        </div>
+        <div class="fed-city">
+          <div class="fed-city-name">Bengaluru</div>
+          <div class="fed-bar-track"><div class="fed-bar-fill" style="width:61%;"></div></div>
+          <div class="fed-city-pct">61%</div>
+        </div>
+        <div class="fed-city">
+          <div class="fed-city-name">Chennai</div>
+          <div class="fed-bar-track"><div class="fed-bar-fill" style="width:44%;"></div></div>
+          <div class="fed-city-pct">44%</div>
+        </div>
+      </div>
+      <div style="margin-top:10px;font-size:10px;color:var(--muted);font-family:'Space Mono',monospace;">
+        Global model v2.4 · Next sync in 1h 12m
+      </div>
+    </div>
+  </aside>
+
+  <!-- STATUS BAR -->
+  <div class="status-bar">
+    <div class="status-item">🟢 <span>System:</span> <span class="status-val">Operational</span></div>
+    <div class="status-item">📡 <span>Sensors:</span> <span class="status-val">47 / 52 online</span></div>
+    <div class="status-item">🔄 <span>3DGS Engine:</span> <span class="status-val">Active</span></div>
+    <div class="status-item">🤖 <span>PINN Model:</span> <span class="status-val">v3.1 loaded</span></div>
+    <div class="status-item">🌐 <span>Fed. Nodes:</span> <span class="status-val">4 cities</span></div>
+    <div class="status-item" style="margin-left:auto;">⚠ <span style="color:var(--red)">2 critical alerts require action</span></div>
+  </div>
+
+</div>
+
+<script>
+  // Clock
+  function updateClock() {
+    const now = new Date();
+    document.getElementById('clock').textContent =
+      now.toLocaleTimeString('en-IN', {hour12:false}) + ' IST';
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  // Build frequency chart bars
+  const freqData = [4.2, 4.1, 4.0, 3.9, 3.8, 3.7, 3.6, 3.5, 3.5, 3.5, 3.6, 3.5];
+  const freqChart = document.getElementById('freqChart');
+  const maxFreq = 4.5;
+  freqData.forEach((val, i) => {
+    const bar = document.createElement('div');
+    bar.className = 'freq-bar';
+    const pct = (val / maxFreq) * 100;
+    bar.style.height = pct + '%';
+    const isCrit = val < 3.7;
+    bar.style.background = isCrit
+      ? `rgba(255,${Math.floor(165*(val-3.4)/0.3)},2,0.8)`
+      : 'rgba(0,210,180,0.6)';
+    bar.style.animationDelay = (i * 0.05) + 's';
+    freqChart.appendChild(bar);
+  });
+
+  // Build corrosion grid
+  const corrGrid = document.getElementById('corrGrid');
+  const riskMap = [
+    3,2,2,3,4,4,3,2,2,1,
+    2,3,3,4,5,5,4,3,2,1,
+    2,3,4,5,5,4,3,2,2,1,
+    1,2,3,4,4,3,2,2,1,1,
+  ];
+  const colors = ['#1a2e3b','#1e4d3a','#3d5a1e','#7a6b00','#ff4757'];
+  riskMap.forEach(v => {
+    const cell = document.createElement('div');
+    cell.className = 'corr-cell';
+    cell.style.background = colors[Math.min(v-1,4)];
+    cell.style.opacity = 0.7 + v * 0.06;
+    corrGrid.appendChild(cell);
+  });
+
+  // Animate freq bars live
+  setInterval(() => {
+    const bars = freqChart.querySelectorAll('.freq-bar');
+    bars.forEach((bar, i) => {
+      const base = freqData[i];
+      const jitter = (Math.random() - 0.5) * 0.1;
+      const val = Math.max(3.3, Math.min(4.5, base + jitter));
+      bar.style.height = (val / 4.5 * 100) + '%';
+    });
+  }, 800);
+
+  // Structure selector
+  function selectStruct(el, score, level) {
+    document.querySelectorAll('.struct-item').forEach(s => s.classList.remove('active'));
+    el.classList.add('active');
+    const colors = { green: 'teal', amber: 'amber', red: 'red' };
+    const scoreEl = document.getElementById('kpi-health');
+    scoreEl.textContent = score;
+    scoreEl.parentElement.className = 'kpi-card ' + (colors[level] || 'teal');
+  }
+
+  // View toggle
+  function setView(btn, view) {
+    document.querySelectorAll('.ctrl-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  // Animate deformation value
+  let driftDir = 1;
+  setInterval(() => {
+    const el = document.getElementById('kpi-deform');
+    let val = parseFloat(el.textContent);
+    val += driftDir * 0.01 * Math.random();
+    if (val > 1.4) driftDir = -1;
+    if (val < 0.9) driftDir = 1;
+    el.textContent = val.toFixed(1) + ' mm';
+  }, 1200);
+
+  // Pulse risk score
+  setInterval(() => {
+    const el = document.getElementById('kpi-risk');
+    const base = 34;
+    const jitter = Math.floor((Math.random()-0.5)*4);
+    el.textContent = (base + jitter) + '%';
+  }, 3000);
+</script>
+</body>
+</html>
